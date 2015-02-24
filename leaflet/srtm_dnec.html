@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="CDED/DNEC 50k Tile Grabber">
+    <meta name="author" content="Vincent Sarago">
+
+    <title>CDED/DNEC 50k Tile Grabber</title>
+
+    <!-- Bootstrap Core CSS -->
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- leaflet CSS -->
+    <link href="css/leaflet.css" rel="stylesheet">
+</head>
+
+<style>
+    body {
+      padding: 0;
+      margin: 0;
+    }
+    html, body, #map {
+      height: 100%;
+    }
+</style>
+
+<body>
+    <div id="map"></div>
+    <!-- jQuery -->
+    <script src="js/jquery.js"></script>
+    <!-- Leaflet -->
+    <script src="js/leaflet-src.js"></script>
+    <script src="js/leaflet.spin.js"></script>
+    <!-- spin -->
+    <script src="js/spin.min.js"></script>
+    <!-- d3 -->
+    <script src="js/d3.min.js"></script>
+    <!-- queue -->
+    <script src="js/queue.min.js"></script>
+    <!-- topojson -->
+    <script src="js/topojson.min.js"></script>
+     <!-- Bootstrap Core JavaScript -->
+    <script src="js/bootstrap.min.js"></script>
+    
+    <script>
+	    function onEachFeature(feature, layer) {
+	        var mirror = 'http://ftp2.cits.rncan.gc.ca/pub/geobase/official/cded/';
+	        var data_dir = '50k_dem/'
+	        var img_dir = 'images_50k/'
+	        var name =  feature.properties.NUMFEUILLE;
+	        
+	        var dir = name.slice(0,3)
+	        var file = mirror + data_dir + dir + '/' + name.toLowerCase() + '.zip'
+	        var quicklook =  mirror + img_dir + 'dnec_' + name.toLowerCase() + '.jpg'
+	
+	        var html = '<div id="pop">'+
+	                   '    You clicked tile <strong>' + name + '</strong>!<br>'+
+	                   '    <img id="quicklook" src="'+ quicklook +'" class="img-thumbnail" width="200" height="200">'+
+	                   '    <div>'+
+	                   '         <a id="tip_button" class="btn btn-small btn-success tip_button" href="' + file + '" target="_blank">Download DNEC Tile</a><br>'+
+	                   '    </div>'+
+	                   '</div>';
+	        var popup = L.popup({maxWidth: 512, maxHeight:512})
+	           .setContent(html);
+	        layer.bindPopup(popup);
+	    };
+
+
+        bounds = L.latLngBounds([39, -142], [84, -52]);
+        
+        var map = L.map('map', {
+            center: [67, -95],
+            maxBounds: bounds,
+            bounceAtZoomLimits: false,
+            zoom: 3,
+            minZoom: 3,
+            maxZoom: 7
+        });   
+
+        map.spin(true);
+	    var osm_url = 'http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+	    var attribution = '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>';
+        var OpenStreetMap = L.tileLayer(osm_url, {id: 'MapID', attribution: attribution})
+                 .addTo(map);
+
+	    var mq_aerial_url = 'http://oatile{s}.mqcdn.com/tiles/1.0.0/sat/{z}/{x}/{y}.jpg'
+        var attribution_mq = 'Tiles Courtesy of <a href="http://www.mapquest.com/">MapQuest</a> &mdash; Portions Courtesy NASA/JPL-Caltech and U.S. Depart. of Agriculture, Farm Service Agency'
+        var MapQuestOpen_Aerial = L.tileLayer(mq_aerial_url, {id: 'MapID', attribution: attribution_mq, subdomains: '1234'});
+
+        var esri_url = 'http://server.arcgisonline.com/ArcGIS/rest/services/World_Shaded_Relief/MapServer/tile/{z}/{y}/{x}';
+        var attribution_esri = 'Tiles &copy; Esri &mdash; Source: Esri';
+        var Esri_WorldShadedRelief = L.tileLayer(esri_url, {id: 'MapID', attribution: attribution_esri, maxZoom: 13});       
+
+        var topojsonPolyOptions = {
+			"color": "#1C1C1C",
+			"weight": 0.2,
+			"fillOpacity": 0.1
+		};	
+        
+        topojsonLayer = L.geoJson(null,{
+			style: topojsonPolyOptions,
+			onEachFeature:onEachFeature
+		});
+
+        queue()
+            //.defer(d3.json, 'https://dl.dropboxusercontent.com/u/29643591/data/dnec.json')
+            .defer(d3.json, 'data/dnec.json')
+            .await(addToMap);
+        
+        function addToMap(error, obj) {
+            var data = topojson.object(obj, obj.objects.dnec).geometries;
+            topojsonLayer.addData(data);
+            topojsonLayer.addTo(map);
+            map.spin(false);
+        }
+
+        var baseMaps = {
+		    "OpenStreetMap": OpenStreetMap,
+            "ESRI-Shaded" : Esri_WorldShadedRelief,
+		    "MapQuest-Aerial" : MapQuestOpen_Aerial
+		};
+		
+		var overlayMaps = {
+		    "CDEC/DNEC Grid": topojsonLayer
+		};
+	    
+        L.control.layers(baseMaps, overlayMaps).addTo(map);
+
+    </script>
+</body>
+</html>
