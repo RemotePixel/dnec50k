@@ -106,7 +106,6 @@
 		});
 
         queue()
-            //.defer(d3.json, 'https://dl.dropboxusercontent.com/u/29643591/data/dnec.json')
             .defer(d3.json, 'data/dnec.json')
             .await(addToMap);
         
